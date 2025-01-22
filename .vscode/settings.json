@@ -5,6 +5,7 @@
         "rhai",
         "rsplitn",
         "splitn",
-        "stringlit"
+        "stringlit",
+        "toresy"
     ]
 }
