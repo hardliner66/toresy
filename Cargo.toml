@@ -1,6 +1,6 @@
 [package]
 name = "toresy"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 description = "Simple term rewriting system based on tokenization"
 license-file = "LICENSE"
