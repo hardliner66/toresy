@@ -1,9 +1,12 @@
 {
     "cSpell.words": [
+        "alexellis",
         "lexpr",
         "Peekable",
         "rhai",
         "rsplitn",
+        "serde",
+        "sexp",
         "splitn",
         "stringlit",
         "toresy"

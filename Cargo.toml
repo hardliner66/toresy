@@ -2,6 +2,9 @@
 name = "toresy"
 version = "0.1.0"
 edition = "2021"
+description = "Simple term rewriting system based on tokenization"
+license-file = "LICENSE"
+repository = "https://github.com/hardliner66/toresy"
 
 [dependencies]
 clap = { version = "4.5.27", features = ["derive"] }
