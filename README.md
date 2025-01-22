@@ -7,7 +7,7 @@
 - [Output / Formatting](#output--formatting)
 
 ## Quickstart
-`cat test.txt | cargo run -q -- -r rules.sexp -f format.rhai`
+`cargo run -q -- -r rules.sexp -f format.rhai -i test.txt`
 
 This will apply the rules defined in `rules.sexp` to the text in `test.txt` and formats it according to
 whats defined in `format.rhai`.
