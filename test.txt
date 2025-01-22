@@ -1,0 +1,6 @@
+add(0, 6)
+add(0, 4)
+add(0, 8)
+add(0, 2)
+"mystring1"
+'mystring2'
