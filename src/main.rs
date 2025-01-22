@@ -1,33 +1,43 @@
-mod formatting;
-
 use toresy::{Rewriter, Rule, Token, Tokenizer};
 
+use script_format::{FormattingEngine, ScriptResult};
+
+use std::io::Read;
 use std::path::PathBuf;
-use std::rc::Rc;
-use std::{cell::RefCell, io::Read};
 
 use clap::Parser;
-use formatting::build_engine;
-use rhai::Scope;
 
 const SEPARATOR: &str = "----------------------------------------";
 
 #[derive(Parser)]
 struct Args {
-    input: Option<String>,
+    /// The data to be rewritten
+    /// If not provided, the data will be read from stdin
+    #[arg(conflicts_with = "input")]
+    data: Option<String>,
 
+    /// The rules to be used for rewriting
     #[arg(long, short)]
     rules: PathBuf,
 
+    /// The input file to be rewritten
+    #[arg(long, short, conflicts_with = "data")]
+    input: Option<PathBuf>,
+
+    /// The output file to write the rewritten data to
+    /// If not provided, the rewritten data will be written to stdout
     #[arg(long, short)]
     output: Option<PathBuf>,
 
+    /// The script to format the rewritten data
     #[arg(long, short)]
     format: Option<PathBuf>,
 
+    /// Enable debug mode for formatting
     #[arg(long, short)]
     debug: bool,
 
+    /// Enable verbose mode
     #[arg(long, short)]
     verbose: bool,
 }
@@ -36,13 +46,12 @@ fn main() {
     let Args {
         rules,
         input,
+        data,
         output,
         format,
         debug,
         verbose,
     } = Args::parse();
-
-    let messages = Rc::new(RefCell::new(Vec::new()));
 
     let rules = std::fs::read_to_string(rules).unwrap();
 
@@ -54,10 +63,14 @@ fn main() {
 
     let rewriter = Rewriter::new(rules);
 
-    let input = input.unwrap_or_else(|| {
-        let mut buf = Vec::new();
-        std::io::stdin().read_to_end(&mut buf).unwrap();
-        String::from_utf8(buf).unwrap()
+    let input = data.unwrap_or_else(|| {
+        input
+            .map(|p| std::fs::read_to_string(p).unwrap())
+            .unwrap_or_else(|| {
+                let mut buf = Vec::new();
+                std::io::stdin().read_to_end(&mut buf).unwrap();
+                String::from_utf8(buf).unwrap()
+            })
     });
 
     let mut tokenizer = Tokenizer::new(&input);
@@ -86,29 +99,28 @@ fn main() {
         );
     }
 
-    if let Some(ref format) = format {
-        let script = std::fs::read_to_string(format).unwrap();
-        let mut scope = Scope::new();
-        scope.push_constant("tokens", rewritten_tokens);
-        scope.push_constant("NL", "\n");
-        scope.push_constant("Identifier", "Identifier");
-        scope.push_constant("Number", "Number");
-        scope.push_constant("Symbol", "Symbol");
-        scope.push_constant("OpenParen", "OpenParen");
-        scope.push_constant("CloseParen", "CloseParen");
-        scope.push_constant("StringLiteral", "StringLiteral");
-        let engine = build_engine(messages.clone(), debug);
-        engine.run_with_scope(&mut scope, &script).unwrap();
+    let formatted = if let Some(ref format) = format {
+        let mut engine = FormattingEngine::new(debug);
+
+        engine
+            .register_type::<Token>()
+            .register_get("enum_type", Token::enum_type)
+            .register_get("value", Token::value)
+            .register_get("quote_style", |t: &mut Token| -> ScriptResult<String> {
+                Token::quote_style(t).ok_or("no quote style".into())
+            });
+
+        engine
+            .format_from_file("tokens", rewritten_tokens, format)
+            .unwrap()
+            .trim()
+            .to_owned()
     } else {
-        let mut messages = messages.borrow_mut();
-        messages.clear();
-        messages.push(
-            serde_lexpr::to_string(&rewritten_tokens)
-                .unwrap()
-                .trim()
-                .to_owned(),
-        );
-    }
+        serde_lexpr::to_string(&rewritten_tokens)
+            .unwrap()
+            .trim()
+            .to_owned()
+    };
 
     if verbose {
         eprintln!();
@@ -116,14 +128,12 @@ fn main() {
         eprintln!();
     }
 
-    let text = messages.borrow().join("");
-
     match output {
         Some(ref output) => {
-            std::fs::write(output, text).unwrap();
+            std::fs::write(output, formatted).unwrap();
         }
         None => {
-            println!("{text}");
+            println!("{formatted}");
         }
     }
 }

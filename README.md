@@ -6,7 +6,6 @@
 - [Rules](#rules)
 - [Output / Formatting](#output--formatting)
 
-
 ## Quickstart
 `cat test.txt | cargo run -q -- -r rules.sexp -f format.rhai`
 
